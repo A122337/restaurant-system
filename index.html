@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة المطعم الذكي Pro</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <style>
+    * { direction: rtl; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #f3f4f6; }
+    .alert-notification { animation: slideIn 0.3s ease-out, fadeOut 0.5s ease-in 4.5s forwards; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    .tab-btn.active { border-bottom: 4px solid white; background: rgba(255,255,255,0.1); }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-screen flex flex-col overflow-hidden">
+  <div id="app" class="h-full flex flex-col"><!-- Main Dashboard -->
+   <div id="dashboard" class="h-full flex flex-col">
+    <header class="bg-purple-900 text-white p-4 shadow-md flex justify-between items-center shrink-0">
+     <div class="flex items-center gap-3">
+      <i data-lucide="layout-dashboard"></i>
+      <h1 class="text-xl font-bold">إدارة المطعم الذكية</h1>
+     </div>
+     <div class="flex items-center gap-4">
+      <span id="currentUser" class="bg-purple-800 px-3 py-1 rounded-full text-sm"></span> <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 p-2 rounded-lg transition"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+     </div>
+    </header>
+    <nav class="bg-purple-700 text-white flex overflow-x-auto shrink-0"><button class="tab-btn nav-tab px-6 py-3 font-medium transition" data-tab="takeaway">سفري (Takeaway)</button> <button class="tab-btn nav-tab px-6 py-3 font-medium transition" data-tab="dine-in">طاولات (Dine-in)</button> <button class="tab-btn nav-tab px-6 py-3 font-medium transition" data-tab="kitchen">المطبخ</button> <button class="tab-btn nav-tab px-6 py-3 font-medium transition" data-tab="menu">المنيو</button> <button class="tab-btn nav-tab px-6 py-3 font-medium transition" data-tab="stats">التقارير</button>
+    </nav>
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-100">
+     <div id="notificationsContainer" class="fixed top-20 left-4 z-50 space-y-2 w-72"></div><!-- Sections -->
+     <section id="takeawayTab" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-4">
+       <h2 class="text-2xl font-bold text-gray-800">طلبات السفري</h2><button id="newTakeawayBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"><i data-lucide="plus" class="w-5 h-5"></i> طلب جديد</button>
+      </div>
+      <div id="takeawayOrders" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
+     </section>
+     <section id="dine-inTab" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-4">
+       <h2 class="text-2xl font-bold text-gray-800">إدارة الطاولات</h2><button id="newDineInBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"><i data-lucide="plus" class="w-5 h-5"></i> طلب جديد</button>
+      </div>
+      <div id="dineInTables" class="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
+     </section>
+     <section id="kitchenTab" class="tab-content hidden">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">شاشة المطبخ</h2>
+      <div id="kitchenOrders" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
+     </section>
+     <section id="menuTab" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-4">
+       <h2 class="text-2xl font-bold text-gray-800">إدارة المنيو</h2><button id="addMenuItemBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"><i data-lucide="plus" class="w-5 h-5"></i> إضافة صنف</button>
+      </div>
+      <div id="menuItems" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
+     </section>
+     <section id="statsTab" class="tab-content hidden">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">التقارير والإحصائيات</h2>
+      <div id="statsContent" class="grid gap-4 md:grid-cols-2 lg:grid-cols-4"></div>
+      <div id="recentOrders" class="mt-6"></div>
+     </section>
+    </main>
+   </div><!-- Modals -->
+   <div id="modalOverlay" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div id="modalContent" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90%] overflow-y-auto p-6"></div>
+   </div>
+  </div>
+  <script>
+   // App State
+   let currentUser = null;
+   let activeTab = 'takeaway';
+   let orders = [];
+   let menuData = [
+    { id: 'm1', name: 'برجر كلاسيك', price: 25, category: 'رئيسي', available: true },
+    { id: 'm2', name: 'بيتزا مارغريتا', price: 35, category: 'رئيسي', available: true },
+    { id: 'm3', name: 'سلطة سيزر', price: 18, category: 'مقبلات', available: true },
+    { id: 'm4', name: 'عصير برتقال', price: 10, category: 'مشروبات', available: true },
+    { id: 'm5', name: 'آيس كريم', price: 12, category: 'حلويات', available: true },
+    { id: 'm6', name: 'شاورما دجاج', price: 20, category: 'رئيسي', available: true },
+    { id: 'm7', name: 'فتة حمص', price: 15, category: 'مقبلات', available: true },
+    { id: 'm8', name: 'قهوة عربية', price: 8, category: 'مشروبات', available: true },
+   ];
+   let tables = Array.from({length: 12}, (_, i) => ({ id: i+1, status: 'free', orderId: null }));
+   let orderCounter = 100;
+
+   // Data SDK
+   const dataHandler = {
+    onDataChanged(data) {
+     orders = data.map(d => ({
+      ...d,
+      items: d.items ? JSON.parse(d.items) : [],
+      __backendId: d.__backendId
+     }));
+     renderCurrentTab();
+    }
+   };
+
+   async function initApp() {
+    const r = await window.dataSdk.init(dataHandler);
+    if (!r.isOk) console.error('Data SDK init failed');
+    window.elementSdk.init({
+     defaultConfig: { app_title: 'نظام إدارة المطعم الذكي' },
+     onConfigChange: async (config) => {
+      document.querySelector('header h1').textContent = config.app_title || 'نظام إدارة المطعم الذكي';
+     },
+     mapToCapabilities: () => ({ recolorables: [], borderables: [], fontEditable: undefined, fontSizeable: undefined }),
+     mapToEditPanelValues: (config) => new Map([['app_title', config.app_title || 'نظام إدارة المطعم الذكي']])
+    });
+   }
+   initApp();
+
+   // Auto login - skip login screen
+   window.addEventListener('load', () => {
+    currentUser = { id: '001', role: 'manager' };
+    document.getElementById('currentUser').textContent = 'مدير - 001';
+    document.getElementById('dashboard').classList.remove('hidden');
+    setActiveTab('takeaway');
+    lucide.createIcons();
+   });
+
+   document.getElementById('logoutBtn').addEventListener('click', () => {
+    currentUser = null;
+    document.getElementById('dashboard').classList.add('hidden');
+   });
+
+   // Navigation
+   document.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+   });
+
+   function setActiveTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+    document.getElementById(`${tab}Tab`).classList.remove('hidden');
+    renderCurrentTab();
+   }
+
+   function renderCurrentTab() {
+    if (activeTab === 'takeaway') renderTakeaway();
+    else if (activeTab === 'dine-in') renderDineIn();
+    else if (activeTab === 'kitchen') renderKitchen();
+    else if (activeTab === 'menu') renderMenu();
+    else if (activeTab === 'stats') renderStats();
+   }
+
+   // Notifications
+   function notify(msg, type='info') {
+    const colors = { info: 'bg-blue-500', success: 'bg-green-500', warning: 'bg-yellow-500', error: 'bg-red-500' };
+    const el = document.createElement('div');
+    el.className = `alert-notification ${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg text-sm`;
+    el.textContent = msg;
+    document.getElementById('notificationsContainer').appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+   }
+
+   // Takeaway
+   function renderTakeaway() {
+    const container = document.getElementById('takeawayOrders');
+    const takeawayOrders = orders.filter(o => o.type === 'takeaway' && o.status !== 'completed');
+    if (!takeawayOrders.length) { container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">لا توجد طلبات سفري حالياً</p>'; return; }
+    container.innerHTML = takeawayOrders.map(o => `
+     <div class="bg-white rounded-xl shadow p-4 border-r-4 ${o.status === 'preparing' ? 'border-orange-500' : o.status === 'ready' ? 'border-green-500' : 'border-blue-500'}">
+      <div class="flex justify-between items-start mb-2">
+       <span class="font-bold text-lg">#${o.orderNum}</span>
+       <span class="text-xs px-2 py-1 rounded-full ${o.status === 'preparing' ? 'bg-orange-100 text-orange-700' : o.status === 'ready' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">${statusLabel(o.status)}</span>
+      </div>
+      <p class="text-sm text-gray-600 mb-1">العميل: ${o.customer || 'بدون اسم'}</p>
+      <ul class="text-sm space-y-1 mb-3">${o.items.map(i => `<li>• ${i.name} × ${i.qty}</li>`).join('')}</ul>
+      <div class="flex justify-between items-center">
+       <span class="font-bold text-purple-700">${o.total} ر.س</span>
+       <div class="flex gap-2">
+        ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.__backendId}','preparing')" class="bg-orange-500 text-white text-xs px-3 py-1 rounded-lg">تحضير</button>` : ''}
+        ${o.status === 'preparing' ? `<button onclick="updateOrderStatus('${o.__backendId}','ready')" class="bg-green-500 text-white text-xs px-3 py-1 rounded-lg">جاهز</button>` : ''}
+        ${o.status === 'ready' ? `<button onclick="updateOrderStatus('${o.__backendId}','completed')" class="bg-gray-500 text-white text-xs px-3 py-1 rounded-lg">تم التسليم</button>` : ''}
+       </div>
+      </div>
+     </div>
+    `).join('');
+   }
+
+   // Dine-in
+   function renderDineIn() {
+    const container = document.getElementById('dineInTables');
+    container.innerHTML = tables.map(t => {
+     const order = orders.find(o => o.tableId == t.id && o.status !== 'completed');
+     const occupied = !!order;
+     return `
+      <div class="bg-white rounded-xl shadow p-4 text-center cursor-pointer hover:shadow-lg transition ${occupied ? 'ring-2 ring-orange-400' : ''}" onclick="${occupied ? `showTableOrder(${t.id})` : `openNewDineInOrder(${t.id})`}">
+       <i data-lucide="${occupied ? 'users' : 'armchair'}" class="w-10 h-10 mx-auto mb-2 ${occupied ? 'text-orange-500' : 'text-green-500'}"></i>
+       <p class="font-bold">طاولة ${t.id}</p>
+       <p class="text-xs mt-1 ${occupied ? 'text-orange-600' : 'text-green-600'}">${occupied ? 'مشغولة' : 'فارغة'}</p>
+       ${occupied ? `<p class="text-xs text-gray-500 mt-1">${order.total} ر.س</p>` : ''}
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+   }
+
+   // Kitchen
+   function renderKitchen() {
+    const container = document.getElementById('kitchenOrders');
+    const activeOrders = orders.filter(o => o.status === 'new' || o.status === 'preparing');
+    if (!activeOrders.length) { container.innerHTML = '<p class="text-gray-500 col-span-full text-center py-8">لا توجد طلبات في المطبخ</p>'; return; }
+    container.innerHTML = activeOrders.map(o => `
+     <div class="bg-white rounded-xl shadow p-4 border-t-4 ${o.status === 'preparing' ? 'border-orange-500' : 'border-blue-500'}">
+      <div class="flex justify-between mb-2">
+       <span class="font-bold">#${o.orderNum} - ${o.type === 'takeaway' ? 'سفري' : 'طاولة ' + o.tableId}</span>
+       <span class="text-xs px-2 py-1 rounded-full ${o.status === 'preparing' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}">${statusLabel(o.status)}</span>
+      </div>
+      <ul class="text-sm space-y-1 mb-3">${o.items.map(i => `<li class="flex justify-between"><span>${i.name}</span><span class="font-bold">×${i.qty}</span></li>`).join('')}</ul>
+      <div class="flex gap-2">
+       ${o.status === 'new' ? `<button onclick="updateOrderStatus('${o.__backendId}','preparing')" class="flex-1 bg-orange-500 text-white py-2 rounded-lg text-sm font-bold">بدء التحضير</button>` : ''}
+       ${o.status === 'preparing' ? `<button onclick="updateOrderStatus('${o.__backendId}','ready')" class="flex-1 bg-green-500 text-white py-2 rounded-lg text-sm font-bold">جاهز ✓</button>` : ''}
+      </div>
+     </div>
+    `).join('');
+   }
+
+   // Menu
+   function renderMenu() {
+    const container = document.getElementById('menuItems');
+    container.innerHTML = menuData.map(item => `
+     <div class="bg-white rounded-xl shadow p-4 ${!item.available ? 'opacity-50' : ''}">
+      <div class="flex justify-between items-start">
+       <div><h3 class="font-bold text-lg">${item.name}</h3><p class="text-sm text-gray-500">${item.category}</p></div>
+       <span class="font-bold text-purple-700">${item.price} ر.س</span>
+      </div>
+      <div class="flex justify-between items-center mt-3">
+       <button onclick="toggleMenuItem('${item.id}')" class="text-sm px-3 py-1 rounded-lg ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${item.available ? 'متوفر' : 'غير متوفر'}</button>
+       <button onclick="deleteMenuItem('${item.id}')" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>
+     </div>
+    `).join('');
+    lucide.createIcons();
+   }
+
+   // Stats
+   function renderStats() {
+    const total = orders.length;
+    const completed = orders.filter(o => o.status === 'completed').length;
+    const revenue = orders.filter(o => o.status === 'completed').reduce((s, o) => s + (o.total || 0), 0);
+    const active = orders.filter(o => o.status !== 'completed').length;
+    document.getElementById('statsContent').innerHTML = `
+     <div class="bg-white rounded-xl shadow p-6 text-center"><p class="text-3xl font-bold text-purple-700">${total}</p><p class="text-gray-500 text-sm">إجمالي الطلبات</p></div>
+     <div class="bg-white rounded-xl shadow p-6 text-center"><p class="text-3xl font-bold text-green-600">${completed}</p><p class="text-gray-500 text-sm">مكتملة</p></div>
+     <div class="bg-white rounded-xl shadow p-6 text-center"><p class="text-3xl font-bold text-orange-500">${active}</p><p class="text-gray-500 text-sm">نشطة</p></div>
+     <div class="bg-white rounded-xl shadow p-6 text-center"><p class="text-3xl font-bold text-blue-600">${revenue} ر.س</p><p class="text-gray-500 text-sm">الإيرادات</p></div>
+    `;
+    document.getElementById('recentOrders').innerHTML = orders.length ? `
+     <div class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-bold mb-3">آخر الطلبات</h3>
+      <div class="space-y-2">${orders.slice(-5).reverse().map(o => `
+       <div class="flex justify-between items-center py-2 border-b last:border-0">
+        <span class="font-medium">#${o.orderNum}</span>
+        <span class="text-sm text-gray-500">${o.type === 'takeaway' ? 'سفري' : 'طاولة ' + o.tableId}</span>
+        <span class="text-xs px-2 py-1 rounded-full ${o.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${statusLabel(o.status)}</span>
+        <span class="font-bold">${o.total} ر.س</span>
+       </div>`).join('')}
+      </div>
+     </div>` : '';
+   }
+
+   function statusLabel(s) { return { new: 'جديد', preparing: 'قيد التحضير', ready: 'جاهز', completed: 'مكتمل' }[s] || s; }
+
+   // Order Actions
+   async function updateOrderStatus(backendId, newStatus) {
+    const order = orders.find(o => o.__backendId === backendId);
+    if (!order) return;
+    const updated = { ...order, status: newStatus, items: JSON.stringify(order.items) };
+    const r = await window.dataSdk.update(updated);
+    if (r.isOk) notify(`تم تحديث الطلب #${order.orderNum}`, 'success');
+    else notify('خطأ في التحديث', 'error');
+   }
+
+   // New Order Modal
+   document.getElementById('newTakeawayBtn').addEventListener('click', () => openOrderModal('takeaway'));
+   document.getElementById('newDineInBtn').addEventListener('click', () => openOrderModal('dine-in'));
+
+   function openNewDineInOrder(tableId) { openOrderModal('dine-in', tableId); }
+
+   function showTableOrder(tableId) {
+    const order = orders.find(o => o.tableId == tableId && o.status !== 'completed');
+    if (!order) return;
+    const modal = document.getElementById('modalContent');
+    modal.innerHTML = `
+     <h2 class="text-xl font-bold mb-4">طاولة ${tableId} - طلب #${order.orderNum}</h2>
+     <ul class="space-y-2 mb-4">${order.items.map(i => `<li class="flex justify-between"><span>${i.name} × ${i.qty}</span><span>${i.price * i.qty} ر.س</span></li>`).join('')}</ul>
+     <div class="flex justify-between font-bold text-lg border-t pt-3"><span>الإجمالي</span><span>${order.total} ر.س</span></div>
+     <div class="flex gap-2 mt-4">
+      ${order.status === 'new' ? `<button onclick="updateOrderStatus('${order.__backendId}','preparing');closeModal()" class="flex-1 bg-orange-500 text-white py-2 rounded-lg">تحضير</button>` : ''}
+      ${order.status === 'preparing' ? `<button onclick="updateOrderStatus('${order.__backendId}','ready');closeModal()" class="flex-1 bg-green-500 text-white py-2 rounded-lg">جاهز</button>` : ''}
+      ${order.status === 'ready' ? `<button onclick="updateOrderStatus('${order.__backendId}','completed');closeModal()" class="flex-1 bg-gray-600 text-white py-2 rounded-lg">إغلاق الطاولة</button>` : ''}
+      <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">إغلاق</button>
+     </div>`;
+    document.getElementById('modalOverlay').classList.remove('hidden');
+   }
+
+   let tempCart = [];
+   function openOrderModal(type, tableId=null) {
+    tempCart = [];
+    const available = menuData.filter(m => m.available);
+    const modal = document.getElementById('modalContent');
+    modal.innerHTML = `
+     <h2 class="text-xl font-bold mb-4">${type === 'takeaway' ? 'طلب سفري جديد' : `طلب جديد - طاولة ${tableId}`}</h2>
+     ${type === 'takeaway' ? '<input id="customerName" placeholder="اسم العميل (اختياري)" class="w-full px-3 py-2 border rounded-lg mb-4">' : ''}
+     <div class="space-y-2 max-h-60 overflow-y-auto mb-4" id="menuSelect">
+      ${available.map(m => `
+       <div class="flex justify-between items-center p-2 border rounded-lg">
+        <div><span class="font-medium">${m.name}</span><span class="text-sm text-gray-500 mr-2">${m.price} ر.س</span></div>
+        <div class="flex items-center gap-2">
+         <button onclick="changeQty('${m.id}',-1)" class="w-7 h-7 bg-gray-200 rounded-full text-lg leading-none">-</button>
+         <span id="qty-${m.id}" class="w-6 text-center font-bold">0</span>
+         <button onclick="changeQty('${m.id}',1)" class="w-7 h-7 bg-purple-200 rounded-full text-lg leading-none">+</button>
+        </div>
+       </div>`).join('')}
+     </div>
+     <div class="border-t pt-3 flex justify-between items-center mb-4"><span class="font-bold">الإجمالي:</span><span id="cartTotal" class="font-bold text-purple-700 text-lg">0 ر.س</span></div>
+     <div class="flex gap-2">
+      <button onclick="submitOrder('${type}',${tableId})" class="flex-1 bg-purple-600 text-white py-2 rounded-lg font-bold">تأكيد الطلب</button>
+      <button onclick="closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">إلغاء</button>
+     </div>`;
+    document.getElementById('modalOverlay').classList.remove('hidden');
+   }
+
+   function changeQty(menuId, delta) {
+    let item = tempCart.find(c => c.id === menuId);
+    if (!item) { const m = menuData.find(x => x.id === menuId); item = { id: m.id, name: m.name, price: m.price, qty: 0 }; tempCart.push(item); }
+    item.qty = Math.max(0, item.qty + delta);
+    if (item.qty === 0) tempCart = tempCart.filter(c => c.id !== menuId);
+    const el = document.getElementById(`qty-${menuId}`);
+    if (el) el.textContent = item.qty;
+    const total = tempCart.reduce((s, c) => s + c.price * c.qty, 0);
+    const totalEl = document.getElementById('cartTotal');
+    if (totalEl) totalEl.textContent = total + ' ر.س';
+   }
+
+   async function submitOrder(type, tableId) {
+    if (!tempCart.length) { notify('أضف أصناف أولاً', 'warning'); return; }
+    if (orders.length >= 999) { notify('تم الوصول للحد الأقصى من الطلبات', 'error'); return; }
+    orderCounter++;
+    const total = tempCart.reduce((s, c) => s + c.price * c.qty, 0);
+    const customer = document.getElementById('customerName')?.value || '';
+    const record = {
+     orderNum: orderCounter,
+     type,
+     tableId: tableId || 0,
+     customer,
+     items: JSON.stringify(tempCart),
+     total,
+     status: 'new',
+     createdAt: new Date().toISOString()
+    };
+    const r = await window.dataSdk.create(record);
+    if (r.isOk) { notify(`تم إنشاء الطلب #${orderCounter}`, 'success'); closeModal(); }
+    else notify('خطأ في إنشاء الطلب', 'error');
+   }
+
+   function closeModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
+   document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+   // Menu management
+   function toggleMenuItem(id) { const item = menuData.find(m => m.id === id); if (item) { item.available = !item.available; renderMenu(); } }
+   function deleteMenuItem(id) { menuData = menuData.filter(m => m.id !== id); renderMenu(); }
+
+   document.getElementById('addMenuItemBtn').addEventListener('click', () => {
+    const modal = document.getElementById('modalContent');
+    modal.innerHTML = `
+     <h2 class="text-xl font-bold mb-4">إضافة صنف جديد</h2>
+     <form id="addMenuForm" class="space-y-3">
+      <div><label class="block text-sm font-medium mb-1">اسم الصنف</label><input id="newItemName" required class="w-full px-3 py-2 border rounded-lg"></div>
+      <div><label class="block text-sm font-medium mb-1">السعر (ر.س)</label><input id="newItemPrice" type="number" required class="w-full px-3 py-2 border rounded-lg"></div>
+      <div><label class="block text-sm font-medium mb-1">التصنيف</label>
+       <select id="newItemCat" class="w-full px-3 py-2 border rounded-lg">
+        <option>رئيسي</option><option>مقبلات</option><option>مشروبات</option><option>حلويات</option>
+       </select>
+      </div>
+      <div class="flex gap-2"><button type="submit" class="flex-1 bg-purple-600 text-white py-2 rounded-lg">إضافة</button><button type="button" onclick="closeModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">إلغاء</button></div>
+     </form>`;
+    document.getElementById('modalOverlay').classList.remove('hidden');
+    document.getElementById('addMenuForm').addEventListener('submit', e => {
+     e.preventDefault();
+     const name = document.getElementById('newItemName').value;
+     const price = parseFloat(document.getElementById('newItemPrice').value);
+     const category = document.getElementById('newItemCat').value;
+     menuData.push({ id: 'm' + Date.now(), name, price, category, available: true });
+     notify('تم إضافة الصنف', 'success');
+     closeModal(); renderMenu();
+    });
+   });
+
+   // Init icons
+   lucide.createIcons();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9f93969cd33d9350',t:'MTc3ODM1OTk1MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
