@@ -19,8 +19,21 @@
   <style>body { box-sizing: border-box; }</style>
  </head>
  <body class="h-screen flex flex-col overflow-hidden">
-  <div id="app" class="h-full flex flex-col"><!-- Main Dashboard -->
-   <div id="dashboard" class="h-full flex flex-col">
+  <div id="app" class="h-full flex flex-col"><!-- Splash Screen -->
+   <div id="splashScreen" class="h-full flex flex-col items-center justify-center bg-gradient-to-b from-purple-900 to-purple-800 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+     <div class="absolute w-96 h-96 bg-purple-400 rounded-full -top-48 -left-48 blur-3xl"></div>
+     <div class="absolute w-96 h-96 bg-orange-400 rounded-full -bottom-48 -right-48 blur-3xl"></div>
+    </div>
+    <div class="relative z-10 text-center">
+     <div class="mb-6 animate-bounce">
+      <i data-lucide="utensils" class="w-24 h-24 text-orange-400 mx-auto"></i>
+     </div>
+     <h1 id="splashTitle" class="text-5xl font-bold text-white mb-2">Cheesy Bite</h1>
+     <p class="text-orange-300 text-lg">إدارة احترافية سهلة</p>
+    </div><button id="startBtn" class="hidden absolute bottom-10 bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg">ابدأ الآن</button>
+   </div><!-- Main Dashboard -->
+   <div id="dashboard" class="h-full flex flex-col hidden">
     <header class="bg-purple-900 text-white p-4 shadow-md flex justify-between items-center shrink-0">
      <div class="flex items-center gap-3">
       <i data-lucide="layout-dashboard"></i>
@@ -113,16 +126,31 @@
 
    // Auto login - skip login screen
    window.addEventListener('load', () => {
-    currentUser = { id: '001', role: 'manager' };
-    document.getElementById('currentUser').textContent = 'مدير - 001';
-    document.getElementById('dashboard').classList.remove('hidden');
-    setActiveTab('takeaway');
     lucide.createIcons();
+    
+    // Show splash screen for 3 seconds, then show start button
+    setTimeout(() => {
+     document.getElementById('startBtn').classList.remove('hidden');
+    }, 3000);
+    
+    // Handle start button click
+    document.getElementById('startBtn').addEventListener('click', () => {
+     document.getElementById('splashScreen').classList.add('hidden');
+     document.getElementById('dashboard').classList.remove('hidden');
+     currentUser = { id: '001', role: 'manager' };
+     document.getElementById('currentUser').textContent = 'مدير - 001';
+     setActiveTab('takeaway');
+    });
    });
 
    document.getElementById('logoutBtn').addEventListener('click', () => {
     currentUser = null;
     document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('splashScreen').classList.remove('hidden');
+    document.getElementById('startBtn').classList.add('hidden');
+    setTimeout(() => {
+     document.getElementById('startBtn').classList.remove('hidden');
+    }, 3000);
    });
 
    // Navigation
@@ -394,5 +422,5 @@
    // Init icons
    lucide.createIcons();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9f93969cd33d9350',t:'MTc3ODM1OTk1MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fa41628049dce14',t:'MTc3ODUzMjk0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
