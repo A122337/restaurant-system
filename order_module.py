@@ -1,38 +1,31 @@
+# Order Management Module
+
 orders = []
-orderCounter = 100
 
-def create_order(order_type, items, table_id=None):
-    global orderCounter
-    orderCounter += 1
-
+def create_order(order_id, customer_name, items, total_price):
     order = {
-        "orderNum": orderCounter,
-        "type": order_type,
-        "tableId": table_id,
+        "order_id": order_id,
+        "customer_name": customer_name,
         "items": items,
-        "status": "new"
+        "total_price": total_price,
+        "status": "Preparing"
     }
 
     orders.append(order)
     return order
 
-def update_order_status(order_num, new_status):
+def update_order_status(order_id, new_status):
     for order in orders:
-        if order["orderNum"] == order_num:
+        if order["order_id"] == order_id:
             order["status"] = new_status
-            return True
-    return False
+            return order
 
-def display_orders():
-    for order in orders:
-        print(order)
+    return "Order not found"
 
-def show_kitchen_orders():
-    for order in orders:
-        if order["status"] in ["new", "preparing"]:
-            print(order)
+def cancel_order(order_id):
+    global orders
+    orders = [order for order in orders if order["order_id"] != order_id]
+    return "Order cancelled"
 
-def show_table_order(table_id):
-    for order in orders:
-        if order["tableId"] == table_id:
-            print(order)
+def get_orders():
+    return orders
