@@ -23,4 +23,5 @@ Restaurant management system for handling takeaway and dine-in orders, kitchen m
 
 # Application Link
 
-[View Application](https://canva.link/1gazirsunlibxvk)
+
+[View Application](https://canva.link/8npgpt4pjdmjg44)
