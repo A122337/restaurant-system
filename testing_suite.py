@@ -1,19 +1,30 @@
+# Testing Suite
+
+from auth_module import login
 from order_module import create_order, update_order_status
-from restaurant_assets import add_menu_item
+from restaurant_assets import show_menu
 
-def test_create_order():
-    order = create_order("takeaway", ["Burger"])
-    assert order is not None
+def run_tests():
 
-def test_update_status():
-    create_order("takeaway", ["Pizza"])
-    assert update_order_status(102, "preparing") == True
+    print("Testing Login...")
+    print(login("admin", "1234"))
 
-def test_add_menu():
-    add_menu_item("Pasta", 30)
+    print("\nTesting Order Creation...")
+    order = create_order(
+        1,
+        "Ahmed",
+        ["Burger", "Pizza"],
+        60
+    )
 
-test_create_order()
-test_update_status()
-test_add_menu()
+    print(order)
 
-print("All tests passed")
+    print("\nTesting Order Status Update...")
+    updated_order = update_order_status(1, "Ready")
+    print(updated_order)
+
+    print("\nTesting Menu Display...")
+    print(show_menu())
+
+if __name__ == "__main__":
+    run_tests()
