@@ -1,38 +1,28 @@
-orders = []
-orderCounter = 100
+# Restaurant Assets and Menu
 
-def create_order(order_type, items, table_id=None):
-    global orderCounter
-    orderCounter += 1
+menu = [
+    {"id": 1, "name": "Burger", "price": 25},
+    {"id": 2, "name": "Pizza", "price": 35},
+    {"id": 3, "name": "Pasta", "price": 30},
+    {"id": 4, "name": "Orange Juice", "price": 10}
+]
 
-    order = {
-        "orderNum": orderCounter,
-        "type": order_type,
-        "tableId": table_id,
-        "items": items,
-        "status": "new"
-    }
+tables = {
+    1: "Available",
+    2: "Occupied",
+    3: "Available",
+    4: "Reserved"
+}
 
-    orders.append(order)
-    return order
+def show_menu():
+    return menu
 
-def update_order_status(order_num, new_status):
-    for order in orders:
-        if order["orderNum"] == order_num:
-            order["status"] = new_status
-            return True
-    return False
+def check_table(table_number):
+    return tables.get(table_number, "Table not found")
 
-def display_orders():
-    for order in orders:
-        print(order)
+def reserve_table(table_number):
+    if table_number in tables:
+        tables[table_number] = "Reserved"
+        return f"Table {table_number} reserved"
 
-def show_kitchen_orders():
-    for order in orders:
-        if order["status"] in ["new", "preparing"]:
-            print(order)
-
-def show_table_order(table_id):
-    for order in orders:
-        if order["tableId"] == table_id:
-            print(order)
+    return "Table not found"
