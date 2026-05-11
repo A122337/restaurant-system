@@ -20,3 +20,7 @@ Restaurant management system for handling takeaway and dine-in orders, kitchen m
 - restaurant_assets.py
 - testing_suite.py
 - index.html
+
+# Application Link
+
+[View Application](https://canva.link/1gazirsunlibxvk)
